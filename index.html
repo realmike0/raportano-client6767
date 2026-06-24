@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Raportano Live Score</title>
+    <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Rubik', sans-serif;
+            background: #000000;
+            color: #ffffff;
+            line-height: 1.5;
+        }
+
+        .app-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        header {
+            padding: 1.5rem 2rem;
+            background: #0a0a0a;
+            border-bottom: 1px solid #1a1a1a;
+        }
+
+        header h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        .navbar {
+            display: flex;
+            gap: 1rem;
+            padding: 1rem 2rem;
+            background: #0a0a0a;
+            border-top: 1px solid #1a1a1a;
+            overflow-x: auto;
+            order: 3;
+        }
+
+        .nav-btn {
+            padding: 0.75rem 1.25rem;
+            border: none;
+            background: transparent;
+            color: #888;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 0.95rem;
+            border-radius: 4px;
+            transition: all 0.3s;
+            font-family: 'Rubik', sans-serif;
+        }
+
+        .nav-btn:hover { color: #fff; }
+        .nav-btn.active {
+            color: #fff;
+            background: #1a1a1a;
+            border-bottom: 2px solid #3b82f6;
+        }
+
+        .content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+            width: 100%;
+            order: 2;
+        }
+
+        .screen { display: none; }
+        .screen.active { display: block; }
+
+        .card {
+            background: #0a0a0a;
+            border: 1px solid #1a1a1a;
+            border-radius: 8px;
+            padding: 2rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .card h2 {
+            font-size: 1.4rem;
+            margin-bottom: 1.5rem;
+            color: #fff;
+            font-weight: 600;
+        }
+
+        .news-item {
+            background: #1a1a1a;
+            border: 1px solid #2a2a2a;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            transition: all 0.3s;
+        }
+
+        .news-item:hover { border-color: #3a3a3a; }
+        .news-item h3 { margin-bottom: 0.5rem; font-size: 1.05rem; color: #fff; }
+        .news-item p { opacity: 0.7; font-size: 0.9rem; }
+
+        .match-card {
+            background: #1a1a1a;
+            border: 1px solid #2a2a2a;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .match-card:hover { border-color: #3a3a3a; transform: translateY(-2px); }
+        .match-card.live { border-color: #ef4444; }
+
+        .match-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+        }
+
+        .match-date { opacity: 0.6; font-size: 0.9rem; }
+        .match-status {
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .match-status.live { background: #ef4444; color: white; }
+        .match-status.completed { background: #3b82f6; color: white; }
+        .match-status.scheduled { background: #666; color: white; }
+
+        .match-score {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .team-name { font-weight: 600; }
+        .score-display { font-size: 2rem; font-weight: 700; text-align: center; color: #3b82f6; }
+
+        .staff-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .staff-card {
+            background: #1a1a1a;
+            border: 1px solid #2a2a2a;
+            border-radius: 8px;
+            padding: 1.5rem;
+            text-align: center;
+            transition: all 0.3s;
+        }
+
+        .staff-card:hover { border-color: #3a3a3a; }
+        .staff-role { opacity: 0.6; font-size: 0.9rem; margin-bottom: 0.5rem; }
+        .staff-name { font-size: 1.1rem; font-weight: 600; }
+
+        .btn {
+            padding: 0.875rem 1.75rem;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            background: #3b82f6;
+            color: #fff;
+            font-size: 0.95rem;
+            font-family: 'Rubik', sans-serif;
+            transition: all 0.3s;
+        }
+
+        .btn:hover { background: #2563eb; transform: translateY(-2px); }
+        .btn-secondary { background: #1a1a1a; border: 1px solid #2a2a2a; color: #fff; }
+        .btn-secondary:hover { background: #2a2a2a; }
+
+        .loading { text-align: center; opacity: 0.6; padding: 2rem; }
+
+        @media (max-width: 768px) {
+            .navbar { gap: 0.5rem; padding: 1rem; }
+            .nav-btn { padding: 0.5rem 1rem; font-size: 0.85rem; }
+            .content { padding: 1rem; }
+            header { padding: 1rem; }
+            header h1 { font-size: 1.4rem; }
+            .match-score { grid-template-columns: 0.8fr auto 0.8fr; gap: 0.5rem; }
+            .score-display { font-size: 1.5rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <header>
+            <h1>⚽ Raportano Live Score</h1>
+        </header>
+
+        <nav class="navbar">
+            <button class="nav-btn active" onclick="switchScreen('home', this)">🏠 Home</button>
+            <button class="nav-btn" onclick="switchScreen('partite', this)">⚽ Partite</button>
+            <button class="nav-btn" onclick="switchScreen('marcatori', this)">🥅 Marcatori</button>
+            <button class="nav-btn" onclick="switchScreen('staff', this)">👥 Staff</button>
+            <button class="nav-btn" onclick="switchScreen('regolamento', this)">📄 Regolamento</button>
+        </nav>
+
+        <div class="content">
+            <!-- HOME -->
+            <div id="home" class="screen active">
+                <div class="card">
+                    <h2>📰 Notizie</h2>
+                    <div id="newsList">
+                        <p class="loading">Caricamento notizie...</p>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2>⚽ Prossime Partite</h2>
+                    <div id="upcomingMatches">
+                        <p class="loading">Caricamento partite...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PARTITE -->
+            <div id="partite" class="screen">
+                <div class="card">
+                    <h2>📅 Tutte le Partite</h2>
+                    <div id="allMatches">
+                        <p class="loading">Caricamento partite...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MARCATORI -->
+            <div id="marcatori" class="screen">
+                <div class="card">
+                    <h2>🥅 Classifica Marcatori</h2>
+                    <table style="width: 100%; margin-top: 1rem;">
+                        <thead>
+                            <tr>
+                                <th style="text-align: center; width: 40px;">Pos</th>
+                                <th>Marcatore</th>
+                                <th style="text-align: center; width: 60px;">Gol</th>
+                            </tr>
+                        </thead>
+                        <tbody id="scorersTable">
+                            <tr>
+                                <td colspan="3" class="loading" style="text-align: center;">Caricamento...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- STAFF -->
+            <div id="staff" class="screen">
+                <div class="card">
+                    <h2>👥 Staff</h2>
+                    <div class="staff-grid" id="staffList">
+                        <p class="loading">Caricamento staff...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- REGOLAMENTO -->
+            <div id="regolamento" class="screen">
+                <div class="card">
+                    <h2>📄 Regolamento Campionato Raportano</h2>
+                </div>
+
+                <div class="card">
+                    <h3 style="color: #3b82f6; margin-bottom: 1rem; font-size: 1.2rem;">REGOLE PRINCIPALI</h3>
+                    <ol style="margin-left: 1.5rem; line-height: 1.8;">
+                        <li>I tempi durano 30 minuti a tempo, nei supplementari 5 minuti a tempo</li>
+                        <li>Nei gironi non ci sono supplementari e rigori</li>
+                        <li>C'è il cartellino giallo e rosso</li>
+                        <li>Il calciomercato si apre quando lo annuncia il creatore e si chiude quando lo annuncia esso, dopo la chiusura nessuna squadra può prendere un giocatore da un'altra</li>
+                        <li>Nel caso in cui un giocatore è svincolato, una squadra può trattare con lui ma non può farlo entrare in squadra fino alla nuova apertura del calciomercato</li>
+                        <li>I SOLDI NON SI USANO</li>
+                        <li><strong>Formula Campionato Raportano:</strong>
+                            <ul style="margin: 0.5rem 0 0 1rem;">
+                                <li><strong>CAMPIONATO RAPORTANO A:</strong> 3 squadre, girone con partite secche o andata e ritorno. Le prime 2 classificate si sfidano alla FINALE DEL CAMPIONATO RAPORTANO, la 3ª classificata retrocede nel CAMPIONATO RAPORTANO B.</li>
+                                <li><strong>CAMPIONATO RAPORTANO B:</strong> 3 squadre, girone con partite secche o andata e ritorno. La prima classificata va nel CAMPIONATO RAPORTANO A.</li>
+                            </ul>
+                        </li>
+                        <li>Per il campionato invernale e i tornei paralleli la formula la manda il presidente sul gruppo</li>
+                        <li>Non si può fare ricorso, se l'arbitro ha fatto male verrà sospeso dal minimo di 1 partita al massimo di 7</li>
+                    </ol>
+                </div>
+
+                <div class="card">
+                    <h3 style="color: #3b82f6; margin-bottom: 1rem; font-size: 1.2rem;">REGOLE PER LE PARTITE</h3>
+                    <ol style="margin-left: 1.5rem; line-height: 1.8; start: 10;">
+                        <li>Non esiste il retropassaggio, se si passa con i piedi al portiere e la prende con le mani è punizione di 2 dentro l'area di rigore</li>
+                        <li>Quando il portiere batte il giocatore avversario non può entrare in area per 5 secondi, se no punizione</li>
+                        <li>I campi dove si gioca sono: Campo R. Marcantonio, Campo F. Delli Muti (167), Campo D. Mosca (Dietro il campo blu)</li>
+                        <li>L'area di rigore è di 5 metri</li>
+                        <li>Il rigore si batte da 7 metri</li>
+                        <li>I giocatori in campo sono 4 + 1 in porta e in panchina quanto si vuole</li>
+                        <li>Ogni squadra deve avere almeno 5 giocatori nella rosa</li>
+                        <li>Una squadra può prendersi massimo 2 giocatori in prestito da altre squadre in una partita prima dell'inizio solo se i giocatori che vengono alla partita non sono 5, a patto che non giochino nella squadra che deve affrontare. Una squadra non si può prendere in prestito un giocatore se i giocatori che vengono alla partita sono 5 o più. Un giocatore svincolato non può andare in prestito in nessuna squadra.</li>
+                        <li>Nel caso in cui una squadra ha 1 o 2 giocatori in meno l'altra squadra si adegua a questa (esempio 4 v 4 o 3 v 3). Nel caso in cui in una squadra ci sono meno di 2 giocatori, la partita viene rimandata per massimo 2 volte di 30 minuti, se non ci sono ancora i parametri per giocare si ripete la partita il giorno dopo alla stessa ora dell'ultimo rinvio.</li>
+                        <li>La rimessa si batte con i piedi</li>
+                        <li>L'angolo si batte con i piedi</li>
+                        <li>Va fuori la palla quando tocca il muro o và nell'erba o supera la linea bianca</li>
+                        <li>Il portiere può tenere la palla per max. 5 secondi, se no si batte una punizione di seconda dentro l'area per gli avversari</li>
+                        <li>Così pure per i giocatori nelle rimesse, però battono dallo stesso punto degli avversari</li>
+                        <li>Una squadra durante una partita non si può ritirare a meno che non abbia 5 gol di scarto</li>
+                        <li>Una squadra non si può ritirare dal campionato prima della fine</li>
+                    </ol>
+                </div>
+
+                <div class="card">
+                    <h3 style="color: #3b82f6; margin-bottom: 1rem; font-size: 1.2rem;">SQUALIFICHE</h3>
+                    <ol style="margin-left: 1.5rem; line-height: 1.8; start: 26;">
+                        <li>Non si può fare rissa, sennò cartellino rosso</li>
+                        <li>Il creatore o il presidente possono decidere di squalificare squadre o giocatori se: Non hanno rispettato il regolamento, Hanno insultato il campionato, Hanno insultato lo staff o giocatori, Hanno picchiato o tentato di picchiare staff o giocatori, Si comportano in modo sbagliato. Il creatore può decidere di squalificare un giocatore anche se non ha fatto i requisiti precedenti solo sentendo prima il presidente insieme al Terzo Creatore.</li>
+                        <li>Il cartellino rosso ti manda fuori dai 10 minuti a tutta la partita, decide l'arbitro sentendo il creatore o, in sua sostituzione, il presidente o un delegato</li>
+                        <li>È compito del creatore decidere se non farlo giocare la prossima partita</li>
+                        <li>Vieta gli insulti ad altri componenti del campionato, togliendo punti se tutta la squadra, squalifica se è una persona</li>
+                    </ol>
+                </div>
+
+                <div class="card">
+                    <h3 style="color: #3b82f6; margin-bottom: 1rem; font-size: 1.2rem;">CASI SPECIALI DI SQUALIFICA</h3>
+                    <ol style="margin-left: 1.5rem; line-height: 1.8; start: 31;">
+                        <li>In caso di squalifica a uno o più giocatori per sempre dal Campionato, bisogna avere l'approvazione di almeno ⅓ dei partecipanti aderenti al voto del Campionato Raportano di categoria di quel giocatore dopo una proposta fatta dal Creatore, Presidente e Terzo Creatore in un comunicato con motivazioni valide.</li>
+                    </ol>
+                </div>
+
+                <div class="card">
+                    <h3 style="color: #3b82f6; margin-bottom: 1rem; font-size: 1.2rem;">LIMITI DI ETÀ</h3>
+                    <ol style="margin-left: 1.5rem; line-height: 1.8; start: 32;">
+                        <li>Ci sono i limiti di categoria: Max 3 del 2010, Max 5 del 2011. Per i 2012 e 2013 in giù non ci sono limiti.</li>
+                        <li>Chi non rispetta il limite di età -2 punti dalla classifica</li>
+                    </ol>
+                </div>
+
+                <div class="card">
+                    <h3 style="color: #3b82f6; margin-bottom: 1rem; font-size: 1.2rem;">PALLONE D'ORO RAPORTANO</h3>
+                    <ol style="margin-left: 1.5rem; line-height: 1.8; start: 34;">
+                        <li>Il pallone d'oro Raportano si svolge: 15 candidati minimo e 20 massimi. Il pallone d'oro lo vota il televoto scegliendo solo un candidato e la giuria votando da 1 a 5 ogni candidato.</li>
+                        <li>Il creatore decide i candidati del Pallone d'Oro</li>
+                        <li>Per essere candidato al Pallone d'Oro, un giocatore deve aver disputato almeno la metà delle partite</li>
+                        <li>In caso di non presenza alla maggior parte delle partite decide i candidati il Presidente o un delegato che è stato presente alla maggior parte delle partite</li>
+                        <li>La giuria è composta da 4 persone: Creatore, Presidente, Terzo Creatore e una persona scelta dal Creatore</li>
+                        <li>Il Pallone d'Oro comprende sia il Campionato Raportano che il Campionato Raportano B. Vengono considerati candidabili 2 giocatori del Campionato Raportano B facenti parte della squadra vincitrice</li>
+                    </ol>
+                </div>
+
+                <div class="card">
+                    <h3 style="color: #3b82f6; margin-bottom: 1rem; font-size: 1.2rem;">DISPOSIZIONI TRANSITORIE E FINALI</h3>
+                    <ol style="margin-left: 1.5rem; line-height: 1.8; start: 40;">
+                        <li>Criteri per le squadre: Devono rispettare l'art 32 del regolamento, Devono rispettare l'art. 15 del regolamento, Devono rispettare l'art.12 del regolamento, Devono accettare la Formula (Art 7 del regolamento), Devono rispettare l'Art. 16, Devono avere obbligatoriamente un Presidente, un Allenatore e un Capitano.</li>
+                        <li>Bisogna richiedere la partecipazione al Campionato al Creatore almeno 10 giorni prima dell'inizio</li>
+                        <li>Per le altre regole si consulta il regolamento ufficiale FIFA del gioco del calcio</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = "https://nvkpmmktfzhepswkwctb.supabase.co";
+        const SUPABASE_KEY = "sb_publishable_VlZNFZJSHCTqqa7h0939bQ_X5CLfyLF";
+
+        let matches = [];
+        let news = [];
+        let teams = [];
+        let staff = [];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadData();
+            setInterval(loadData, 5000);
+        });
+
+        async function loadData() {
+            await loadTeams();
+            await loadMatches();
+            await loadNews();
+            await loadStaff();
+            await loadScorers();
+        }
+
+        function switchScreen(screenName, button) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(screenName).classList.add('active');
+            if (button) button.classList.add('active');
+        }
+
+        async function apiCall(table) {
+            try {
+                const url = `${SUPABASE_URL}/rest/v1/${table}`;
+                const response = await fetch(url, {
+                    headers: {
+                        'apikey': SUPABASE_KEY,
+                        'Authorization': `Bearer ${SUPABASE_KEY}`
+                    }
+                });
+                if (!response.ok) throw new Error('API Error');
+                return await response.json();
+            } catch (err) {
+                return null;
+            }
+        }
+
+        async function loadTeams() {
+            const result = await apiCall('teams');
+            if (result) teams = result;
+        }
+
+        async function loadMatches() {
+            const result = await apiCall('matches?order=date.desc');
+            if (result) {
+                matches = result;
+                updateMatchesDisplay();
+                updateUpcomingMatches();
+            }
+        }
+
+        function updateMatchesDisplay() {
+            const div = document.getElementById('allMatches');
+            if (!matches.length) {
+                div.innerHTML = '<p class="loading">Nessuna partita</p>';
+                return;
+            }
+
+            div.innerHTML = matches.map(m => {
+                const t1 = teams.find(t => t.id === m.team1_id)?.name || 'Squad1';
+                const t2 = teams.find(t => t.id === m.team2_id)?.name || 'Squad2';
+                const isLive = m.status === 'live';
+
+                return `
+                    <div class="match-card ${isLive ? 'live' : ''}">
+                        <div class="match-header">
+                            <div class="match-date">${formatDate(m.date)}</div>
+                            <div class="match-status ${m.status}">${getStatusLabel(m.status)}</div>
+                        </div>
+                        <div class="match-score">
+                            <div class="team-name">${t1}</div>
+                            <div class="score-display">${m.score1 || 0} - ${m.score2 || 0}</div>
+                            <div class="team-name" style="text-align: right;">${t2}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function updateUpcomingMatches() {
+            const div = document.getElementById('upcomingMatches');
+            const upcoming = matches.slice(0, 3);
+            
+            if (!upcoming.length) {
+                div.innerHTML = '<p class="loading">Nessuna partita programmata</p>';
+                return;
+            }
+
+            div.innerHTML = upcoming.map(m => {
+                const t1 = teams.find(t => t.id === m.team1_id)?.name || 'Squad1';
+                const t2 = teams.find(t => t.id === m.team2_id)?.name || 'Squad2';
+
+                return `
+                    <div class="match-card">
+                        <div class="match-header">
+                            <div class="match-date">${formatDate(m.date)}</div>
+                            <div class="match-status ${m.status}">${getStatusLabel(m.status)}</div>
+                        </div>
+                        <div class="match-score">
+                            <div class="team-name">${t1}</div>
+                            <div class="score-display">${m.score1 || 0} - ${m.score2 || 0}</div>
+                            <div class="team-name" style="text-align: right;">${t2}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function loadNews() {
+            const result = await apiCall('news?order=created_at.desc');
+            if (result) {
+                news = result;
+                updateNewsList();
+            }
+        }
+
+        function updateNewsList() {
+            const div = document.getElementById('newsList');
+            if (!news.length) {
+                div.innerHTML = '<p class="loading">Nessuna notizia</p>';
+                return;
+            }
+
+            div.innerHTML = news.map(n => `
+                <div class="news-item">
+                    <h3>${n.title}</h3>
+                    <p>${n.text}</p>
+                </div>
+            `).join('');
+        }
+
+        async function loadStaff() {
+            const result = await apiCall('staff');
+            if (result) {
+                staff = result;
+                updateStaffDisplay();
+            }
+        }
+
+        function updateStaffDisplay() {
+            const div = document.getElementById('staffList');
+            
+            if (!staff.length) {
+                div.innerHTML = '<p class="loading">Staff non disponibile</p>';
+                return;
+            }
+
+            div.innerHTML = staff.map(m => `
+                <div class="staff-card">
+                    <div class="staff-role">${m.role}</div>
+                    <div class="staff-name">${m.name || '-'}</div>
+                </div>
+            `).join('');
+        }
+
+        function formatDate(dateStr) {
+            const date = new Date(dateStr);
+            const options = { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' };
+            return date.toLocaleDateString('it-IT', options);
+        }
+
+        function getStatusLabel(status) {
+            const labels = {
+                'scheduled': '⏰ Programmata',
+                'live': '🔴 LIVE',
+                'completed': '✅ Conclusa'
+            };
+            return labels[status] || 'N/A';
+        }
+
+        function downloadPDF() {
+            const url = `${SUPABASE_URL}/storage/v1/object/public/regolamento/regolamento.pdf`;
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'regolamento.pdf';
+            link.click();
+        }
+
+        async function loadScorers() {
+            const result = await apiCall('goals?order=scorer.asc');
+            if (result && Array.isArray(result)) {
+                // Conta i gol per marcatore
+                const scorerMap = {};
+                result.forEach(goal => {
+                    const name = goal.scorer.trim();
+                    scorerMap[name] = (scorerMap[name] || 0) + 1;
+                });
+
+                // Converti in array e ordina per gol (decrescente)
+                const scorers = Object.entries(scorerMap)
+                    .map(([name, goals]) => ({ name, goals }))
+                    .sort((a, b) => b.goals - a.goals);
+
+                updateScorersDisplay(scorers);
+            }
+        }
+
+        function updateScorersDisplay(scorers) {
+            const tbody = document.getElementById('scorersTable');
+            if (!scorers.length) {
+                tbody.innerHTML = '<tr><td colspan="3" class="loading" style="text-align: center;">Nessun gol</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = scorers.map((s, i) => `
+                <tr>
+                    <td style="text-align: center; font-weight: 700; color: #3b82f6;">${i + 1}</td>
+                    <td>${s.name}</td>
+                    <td style="text-align: center; font-weight: 600; color: #3b82f6;">${s.goals}</td>
+                </tr>
+            `).join('');
+        }
+    </script>
+</body>
+</html>
