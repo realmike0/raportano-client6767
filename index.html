@@ -396,13 +396,14 @@
         }
 
         async function apiCall(table) {
-            try {
-                const url = `${SUPABASE_URL}/rest/v1/${table}`;
-                const response = await fetch(url, {
-                    headers: {
-                        'apikey': SUPABASE_KEY,
-                        'Authorization': `Bearer ${SUPABASE_KEY}`
-                    }
+            const response = await fetch(`${SUPABASE_URL}/rest/v1/${table}`,
+            headers: {
+            'apikey': SUPABASE_KEY,  // ← Publishable key (OK per letture)
+            'Authorization': `Bearer ${SUPABASE_KEY}`
+        }
+    });
+    return await response.json();
+}
                 });
                 if (!response.ok) throw new Error('API Error');
                 return await response.json();
